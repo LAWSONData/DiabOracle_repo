@@ -1,0 +1,15 @@
+:root {
+	font-family: 'Work Sans', sans-serif;
+	background-color:#E5E5E5;
+  }
+canvas{
+	font-family: 'Times New Roman', sans-serif;
+}
+.div-center {
+	display: flex;
+	justify-content: center;
+	align-items: center
+}
+[v-cloak]{
+    display: none;
+}
