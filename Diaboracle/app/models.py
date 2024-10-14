@@ -1,3 +1,5 @@
+from django.utils import timezone
+from datetime import timedelta
 from django.db import models
 from app.utils import *
 
@@ -82,6 +84,30 @@ class Utilisateur(models.Model):
         if self.has_data():
             return Donnee.objects.filter(utilisateur=self).last().niveauInsuline
         return 0
+
+class UserAuth(models.Model):
+    code = models.CharField(max_length=MAX_CHAR)
+    user = models.ForeignKey(Utilisateur, on_delete=models.CASCADE)
+    codeAuthentification = models.CharField(max_length=MAX_CHAR)
+    date_expiration = models.DateTimeField()
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            codes = UserAuth.objects.values_list('code', flat=True)
+            code = generate_string(LENGTH_CODE)
+            while code in codes:
+                code = generate_string(LENGTH_CODE)
+            self.code = code
+        if not self.codeAuthentification:
+            self.codeAuthentification = generate_code()
+            self.date_expiration = timezone.now() + timedelta(minutes=15)
+        super().save(*args, **kwargs)
+
+    def is_expired(self):
+        return self.date_expiration < timezone.now()
+
+    def is_valid(self):
+        return not self.is_expired()
 
 class Patient(models.Model):
     code = models.CharField(max_length=MAX_CHAR)

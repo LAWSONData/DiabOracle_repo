@@ -30,7 +30,7 @@ app = Vue.createApp({
             axios.get('/api/login?email='+this.email+'&password='+this.password)
             .then(response => {
                 if (response.data.status == 200){
-                    window.location.href = '/dash';
+                    window.location.href = '/verif_2FA';
                 }
                 else{
                     showError(response.data.message);

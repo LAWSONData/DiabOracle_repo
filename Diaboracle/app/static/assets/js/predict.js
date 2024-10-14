@@ -103,6 +103,9 @@ app = Vue.createApp({
             })
         },
     },
+    mounted(){
+      document.getElementById("cguButton").click();
+  }
 })
 if (document.getElementById("predict")){
     app.mount("#predict")

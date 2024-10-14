@@ -44,6 +44,9 @@ app = Vue.createApp({
             })
         }
     },
+    mounted(){
+        document.getElementById("cguButton").click();
+    }
 })
 if (document.getElementById("signin")){
     app.mount("#signin")

@@ -21,6 +21,46 @@ def recommandations(request):
     user_code = request.session.get("user", None)
     return render(request, "recommandations.html")
 
+def recom1(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom1.html")
+
+def recom2(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom2.html")
+
+def recom3(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom3.html")
+
+def recom4(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom4.html")
+
+def recom5(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom5.html")
+
+def recom6(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom6.html")
+
+def recom7(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom7.html")
+
+def recom8(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom8.html")
+
+def recom9(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom9.html")
+
+def recom10(request):
+    user_code = request.session.get("user", None)
+    return render(request, "recom10.html")
+
 def predict_diabete_api(request):
     data = {
         'status': 400,
@@ -56,9 +96,6 @@ def predict_diabete_api(request):
     return JsonResponse(data)
 
 def prediction_passant(request):
-    user_code = request.session.get("user", None)
-    if user_code != None:
-        return redirect("/dash")
     return render(request, "predict.html")
 
 def login(request):
@@ -72,12 +109,48 @@ def login(request):
         if utilisateur.exists():
             utilisateur = utilisateur.first()
             if chiffrement(password) == utilisateur.password:
-                return redirect("/dash")
+                auth = UserAuth(user=utilisateur)
+                auth.save()
+                send_code_mail(utilisateur, auth.codeAuthentification)
+                request.session["2FA_user"] = utilisateur.code
+                return redirect("/verif_2FA")
             else:
                 return redirect("/login")
         else:
             return redirect("/login")
     return render(request, "admin-temp/login.html")
+
+def verif_2FA(request):
+    error = request.session.pop("error", None)
+    user_code = request.session.get("user", None)
+    if user_code != None:
+        return redirect("/dash")
+    if request.POST:
+        code = request.POST["code"]
+        codeUser = request.session["2FA_user"]
+        if code == "":
+            request.session["error"] = "Veuillez remplir tous les champs"
+            return redirect("/verif_2FA")
+        else:
+            utilisateur = Utilisateur.objects.get(code=codeUser)
+            authUser = UserAuth.objects.filter(user=utilisateur)
+            if authUser.exists():
+                authUser = authUser.last()
+                if authUser.codeAuthentification == code:
+                    request.session["user"] = codeUser
+                    request.session.pop("2FA_user")
+                    authUser.delete()
+                    return redirect("/dash")
+                else:
+                    request.session["error"] = "Le code est incorrect ou invalide."
+                    return redirect("/verif_2FA")
+            else:
+                    request.session["error"] = "Le code est incorrect ou invalide."
+                    return redirect("/verif_2FA")
+    return render(request, "admin-temp/verif_login.html",{
+        "code": user_code,
+        "error": error
+    })
 
 def api_login(request):
     if request.GET:
@@ -639,6 +712,12 @@ def api_getGrapheDatas(request):
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
                             datas.append(donnee.poids)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.poids)
+                        elif Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).last()
+                            datas.append(donnee.poids)
                         else:
                             datas.append(0)
                 if constante == "Risque":
@@ -654,6 +733,16 @@ def api_getGrapheDatas(request):
                             donnee.evaluate()
                             res = donnee.answer()
                             datas.append(res.risque())
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            donnee.evaluate()
+                            res = donnee.answer()
+                            datas.append(res.risque())
+                        elif Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).last()
+                            donnee.evaluate()
+                            res = donnee.answer()
+                            datas.append(res.risque())
                         else:
                             datas.append(0)
                 elif constante == "Taille":
@@ -664,6 +753,12 @@ def api_getGrapheDatas(request):
                             datas.append(donnee.taille)
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
+                            datas.append(donnee.taille)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.taille)
+                        elif Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).last()
                             datas.append(donnee.taille)
                         else:
                             datas.append(0)
@@ -676,6 +771,12 @@ def api_getGrapheDatas(request):
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
                             datas.append(donnee.niveauInsuline)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.niveauInsuline)
+                        elif Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).last()
+                            datas.append(donnee.niveauInsuline)
                         else:
                             datas.append(0)
                 elif constante == "Etat de grossesse":
@@ -686,6 +787,12 @@ def api_getGrapheDatas(request):
                             datas.append(donnee.etat_de_grossesse)
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
+                            datas.append(donnee.etat_de_grossesse)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.etat_de_grossesse)
+                        elif Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, utilisateur=utilisateur).last()
                             datas.append(donnee.etat_de_grossesse)
                         else:
                             datas.append(0)
@@ -870,6 +977,12 @@ def api_getGrapheDatasPatient(request, code):
                         if donnees.filter(date=jour).exists():
                             donnee = donnees.filter(date=jour).first()
                             datas.append(donnee.poids)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.poids)
+                        elif Donnee.objects.filter(date__lt=jour, patient=patient).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, patient=patient).last()
+                            datas.append(donnee.poids)
                         else:
                             datas.append(0)
                 elif constante == "Taille":
@@ -880,6 +993,12 @@ def api_getGrapheDatasPatient(request, code):
                             datas.append(donnee.taille)
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
+                            datas.append(donnee.taille)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.taille)
+                        elif Donnee.objects.filter(date__lt=jour, patient=patient).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, patient=patient).last()
                             datas.append(donnee.taille)
                         else:
                             datas.append(0)
@@ -892,6 +1011,12 @@ def api_getGrapheDatasPatient(request, code):
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
                             datas.append(donnee.niveauInsuline)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.niveauInsuline)
+                        elif Donnee.objects.filter(date__lt=jour, patient=patient).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, patient=patient).last()
+                            datas.append(donnee.niveauInsuline)
                         else:
                             datas.append(0)
                 elif constante == "Etat de grossesse":
@@ -903,6 +1028,37 @@ def api_getGrapheDatasPatient(request, code):
                         elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
                             donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
                             datas.append(donnee.etat_de_grossesse)
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            datas.append(donnee.etat_de_grossesse)
+                        elif Donnee.objects.filter(date__lt=jour, patient=patient).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, patient=patient).last()
+                            datas.append(donnee.etat_de_grossesse)
+                        else:
+                            datas.append(0)
+                elif constante == "Risque":
+                    datas = []
+                    for jour in period:
+                        if donnees.filter(date=jour).exists():
+                            donnee = donnees.filter(date=jour).first()
+                            donnee.evaluate()
+                            res = donnee.answer()
+                            datas.append(res.risque())
+                        elif is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[0]:
+                            donnee = donnees.filter(date=is_date_in_intervals(jour, donnees.values_list("date", flat=True).all())[1]).first()
+                            donnee.evaluate()
+                            res = donnee.answer()
+                            datas.append(res.risque())
+                        elif convertir_date_en_datetime(donnees.last().date) < convertir_date_en_datetime(jour):
+                            donnee = donnees.last()
+                            donnee.evaluate()
+                            res = donnee.answer()
+                            datas.append(res.risque())
+                        elif Donnee.objects.filter(date__lt=jour, patient=patient).exists():
+                            donnee = Donnee.objects.filter(date__lt=jour, patient=patient).last()
+                            donnee.evaluate()
+                            res = donnee.answer()
+                            datas.append(res.risque())
                         else:
                             datas.append(0)
                 return JsonResponse({

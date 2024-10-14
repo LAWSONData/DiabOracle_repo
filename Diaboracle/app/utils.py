@@ -3,6 +3,21 @@ import datetime
 from app.config import *
 import numpy as np
 import calendar
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
+def send_code_mail(user, code):
+    html_message = render_to_string("mail/2FA.html",context={"utilisateur":user, "code":code})
+    plain_message = strip_tags(html_message)
+    subject = "Code de confirmation de connexion"
+    message = EmailMultiAlternatives(subject=subject,
+                                    from_email=EMAIL,
+                                    to=[user.email],
+                                    body=plain_message,                      
+    )
+    message.attach_alternative(html_message, "text/html")
+    message.send()
 
 def predict_diabetes(age, poids, taille, glycemie, etat_de_grossesse):
     # Coefficients obtenus du modèle
@@ -25,12 +40,18 @@ def predict_diabetes(age, poids, taille, glycemie, etat_de_grossesse):
     probability = 1 / (1 + np.exp(-linear_combination))
     return probability
 
+def convertir_date_en_datetime(date_obj):
+    return datetime.datetime.combine(date_obj, datetime.datetime.min.time())
 
 def date_to_text(date):
     return date.strftime('%Y-%m-%d')
 
 def text_to_date(text):
     return datetime.datetime.strptime(text, '%Y-%m-%d')
+
+def generate_code(length=6):
+    """Generate numeric code"""
+    return ''.join(random.choices(string.digits, k=length))
 
 def generate_string(length=12):
     """Generate a strong password."""
